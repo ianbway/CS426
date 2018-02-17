@@ -3,7 +3,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define MAX_LINE 80 /* The maximum length command */
@@ -41,12 +43,11 @@ execute(char **argv)
 	*/
 
     pid_t pid;
-    int status;
      
     if ((pid = fork()) < 0) /* fork a child process */
     {     
         fprintf(stderr, "Fork Failed\n");
- 		return 1;
+ 		exit(1);
     }
 
     else if (pid == 0) /* for the child process: */
@@ -54,38 +55,71 @@ execute(char **argv)
         if (execvp(*argv, argv) < 0) /* execute the command  */
         {     
             printf("Exec failed\n");
-            return 1;
+            exit(1);
         }
     }
 
     else 
     {                                  /* for the parent: */
-        while (wait(&status) != pid)       /* wait for completion  */
+        while (wait(NULL) != pid)       /* wait for completion  */
                ;
     }
 }
 
 int 
-main(int argc, char **argv)
+main(void)
 {
 	char *args[MAX_LINE/2 + 1]; /* command line arguments */
 	int should_run = 1; /* flag to determine when to exit program */
 	
 	char line[1024];
 
+	char **history = malloc(10 * sizeof(char *));
+	int histCounter = 0;
+	int i;
+
 	while (should_run) 
 	{
+		start:
 		printf("osh>");
 		fflush(stdout);
 
-		gets(line);
+		// Gets the line, command and its options
+		fgets(line, sizeof(line), stdin);
+		if (line[strlen(line)-1] == '\n') 
+		{
+			line[strlen(line)-1] = '\0';
+		}
 
 		parse(line, args); /* parse the line */
+
         if (strcmp(args[0], "exit") == 0)  /* is it an "exit"? */
 		{
 			exit(0); /* exit if it is */
 		}
-               
+
+		history[(histCounter-1) % 10] = line;
+		histCounter++;
+
+		if (strcmp(args[0], "history") == 0)  /* Displays history */
+		{
+
+			if (history[0] == 0)
+			{
+					printf("No commands in history.\n");
+					goto start;
+			}
+
+			for(i=0; i<10; i++)
+			{
+				if (history[i] != 0)
+				{
+					printf("%s\n", history[i]);
+				}
+
+			}
+		}
+
         execute(args); /* otherwise, execute the command */
 	}
 
