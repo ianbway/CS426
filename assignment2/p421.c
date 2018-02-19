@@ -16,6 +16,10 @@ int average;
 int maximum;
 int minimum;
 
+int average_value(int []);
+int maximum_value(int []);
+int minimum_value(int []);
+
 void *
 average_wrapper(void *args)
 {

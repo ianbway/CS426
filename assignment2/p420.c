@@ -1,6 +1,6 @@
 // Ian Braudaway
 // CS426-001 Assignment 2
-// Problem 4.20, Uses 3.20 Implementation file
+// Problem 4.20, Uses 3.20 Implementation
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,10 +31,12 @@ allocate_map(void)
 {	
 	int i;
 
-	for(i = 0; i < MAX_PID-MIN_PID+1; i++) 
+	for(i = MIN_PID; i < MAX_PID+1; i++) 
 	{
   		map[i] = 0;   
 	}
+
+	printf("Map allocated.\n");
 
 	return 1;
 }
@@ -46,14 +48,15 @@ allocate_pid(void)
 {
 	int i;
 
-	for(i = 0; i < MAX_PID-MIN_PID+1; i++) 
+	for(i = MIN_PID; i < MAX_PID+1; i++) 
 	{
 		
 		// If slot open, allocate pid and return number
 		if(map[i] == 0) 
 		{
 			map[i] = 1;
-			return i + MIN_PID;
+			printf("PID at index %d allocated.\n", i);
+			return i;
 		}
 	}
 
@@ -66,18 +69,19 @@ void
 release_pid(int pid)
 {
 	// release a pid by setting slot to 0
-	map[MIN_PID + pid] = 0;
+	map[pid] = 0;
+
+	printf("PID %d released.\n", pid);
 }
 
 // wrapper for pthread_create call
 void *
 allocate_pid_wrapper(void *args)
 {
-	int randInt = rand() % 9;      // returns a pseudo-random integer between 0 and 24
+	int randInt = rand() % 7;      // returns a pseudo-random integer between 0 and 7
 
     int retval = allocate_pid(); // allocate pid
 
-    fprintf(stdout, "Allocated PID: %d \n", retval);
     sleep(randInt); // sleep for random period of time, randInt being the random number
     release_pid(retval); // release pid
     int *ret = malloc(sizeof(int));
@@ -100,7 +104,8 @@ main(void)
     	pthread_create(&thr,NULL,allocate_pid_wrapper,NULL);
 	}
 
-	sleep(2);
+	// give time for threads to release
+	sleep(10);
 
 	return 0;
 }

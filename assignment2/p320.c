@@ -27,10 +27,12 @@ allocate_map(void)
 {	
 	int i;
 
-	for(i = 0; i < MAX_PID-MIN_PID+1; i++) 
+	for(i = MIN_PID; i < MAX_PID+1; i++) 
 	{
   		map[i] = 0;   
 	}
+
+	printf("Map allocated.\n");
 
 	return 1;
 }
@@ -42,14 +44,15 @@ allocate_pid(void)
 {
 	int i;
 
-	for(i = 0; i < MAX_PID-MIN_PID+1; i++) 
+	for(i = MIN_PID; i < MAX_PID+1; i++) 
 	{
 		
 		// If slot open, allocate pid and return number
 		if(map[i] == 0) 
 		{
 			map[i] = 1;
-			return i + MIN_PID;
+			printf("PID at index %d allocated.\n", i);
+			return i;
 		}
 	}
 
@@ -62,22 +65,36 @@ void
 release_pid(int pid)
 {
 	// release a pid by setting slot to 0
-	map[MIN_PID + pid] = 0;
+	map[pid] = 0;
+
+	printf("PID %d released.\n", pid);
 }
 
 int 
 main(void)
 {
 	allocate_map();
-	int pid = allocate_pid();
-	fprintf(stdout, "Allocated PID: %d \n", pid);
-	release_pid(pid);
+	allocate_pid();
+	release_pid(300);
+
+	allocate_pid();
+	allocate_pid();
+	allocate_pid();
+	allocate_pid();
+	allocate_pid();
+	allocate_pid();
+	allocate_pid();
+	allocate_pid();
+	release_pid(300);
+	release_pid(301);
+	release_pid(302);
+
+	allocate_pid();
 
 	int i;
-	for (i=300; i<5001; i++)
+	for (i=300; i<5000; i++)
 	{
-		int pid = allocate_pid();
-		fprintf(stdout, "Allocated PID: %d \n", pid);
+		allocate_pid();
 	}
 
 	return 0;
