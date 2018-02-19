@@ -73,7 +73,7 @@ release_pid(int pid)
 void *
 allocate_pid_wrapper(void *args)
 {
-	int randInt = rand() % 25;      // returns a pseudo-random integer between 0 and 24
+	int randInt = rand() % 9;      // returns a pseudo-random integer between 0 and 24
 
     int retval = allocate_pid(); // allocate pid
 
@@ -100,7 +100,7 @@ main(void)
     	pthread_create(&thr,NULL,allocate_pid_wrapper,NULL);
 	}
 
-	sleep(3);
+	sleep(2);
 
 	return 0;
 }
