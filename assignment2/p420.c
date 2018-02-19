@@ -73,7 +73,7 @@ release_pid(int pid)
 void *
 allocate_pid_wrapper(void *args)
 {
-	int randInt = rand();      // returns a pseudo-random integer between 0 and RAND_MAX
+	int randInt = rand() % 25;      // returns a pseudo-random integer between 0 and 24
 
     int retval = allocate_pid(); // allocate pid
 
@@ -92,13 +92,15 @@ main(void)
 
 	srand(time(NULL));   // should only be called once, this is to make randint
 
-	pthread_t thr;
 	size_t i;
 
 	for(i=0;i<100;i++) 
 	{
+		pthread_t thr;
     	pthread_create(&thr,NULL,allocate_pid_wrapper,NULL);
 	}
+
+	sleep(3);
 
 	return 0;
 }

@@ -12,11 +12,14 @@
 #include <time.h>
 
 int n;
+int average;
+int maximum;
+int minimum;
 
 void *
 average_wrapper(void *args)
 {
-    int retval = average(args);
+    int retval = average_value(args);
 
     int *ret = malloc(sizeof(int));
     *ret = retval;
@@ -26,7 +29,7 @@ average_wrapper(void *args)
 void *
 maximum_wrapper(void *args)
 {
-    int retval = maximum(args);
+    int retval = maximum_value(args);
 
     int *ret = malloc(sizeof(int));
     *ret = retval;
@@ -36,7 +39,7 @@ maximum_wrapper(void *args)
 void *
 minimum_wrapper(void *args)
 {
-    int retval = minimum(args);
+    int retval = minimum_value(args);
 
     int *ret = malloc(sizeof(int));
     *ret = retval;
@@ -45,7 +48,7 @@ minimum_wrapper(void *args)
 
 // Function to find average of array values
 int 
-average(int input[n])
+average_value(int input[])
 {
 	int sum = 0;
 	int i;
@@ -53,16 +56,14 @@ average(int input[n])
 	{
 		sum = sum + input[i];
 	}
-	int average = sum / n;
-	
-	printf("The average value is %d\n", average);
+	average = sum / n;
 }
 
 // Function for max value in array
 int 
-maximum(int input[n])
+maximum_value(int input[])
 {
-	int maximum = input[0];
+	maximum = input[0];
 	int i;
 	for (i = 0; i < n; i++)
   	{
@@ -71,15 +72,13 @@ maximum(int input[n])
        		maximum  = input[i];
     	}
 	}
-
-	printf("The maximum value is %d\n", maximum);
 }
 
 // Function for min value in array
 int 
-minimum(int input[n])
+minimum_value(int input[])
 {
-	int minimum = input[0];
+	minimum = input[0];
 	int i;
 	for (i = 0; i < n; i++)
   	{
@@ -88,8 +87,6 @@ minimum(int input[n])
        		minimum  = input[i];
     	}
 	}
-
-	printf("The minimum value is %d\n", minimum);
 }
 
 int 
@@ -107,15 +104,21 @@ main(int argc, char **argv)
     int valArray[n];
 
     int i;
-    for(i = 0; i < n; ++i)
+    for(i = 0; i < n; i++)
     {
         printf("%d. Enter number: ", i+1);
         scanf("%d", &valArray[i]);
     }
 
-	pthread_t thr;
+	pthread_t average_thr;
+	pthread_t maximum_thr;
+	pthread_t minimum_thr;
 
-	pthread_create(&thr,NULL,average_wrapper,valArray);
-	pthread_create(&thr,NULL,maximum_wrapper,valArray);
-	pthread_create(&thr,NULL,minimum_wrapper,valArray);
+	pthread_create(&average_thr,NULL,average_wrapper,valArray);
+	pthread_create(&maximum_thr,NULL,maximum_wrapper,valArray);
+	pthread_create(&minimum_thr,NULL,minimum_wrapper,valArray);
+
+	printf("The average value is %d\n", average);
+	printf("The maximum value is %d\n", maximum);
+	printf("The minimum value is %d\n", minimum);
 }
