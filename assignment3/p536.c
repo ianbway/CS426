@@ -90,7 +90,7 @@ allocate_pid_wrapper(void *args)
 	// allocate pid
     int retval = allocate_pid(); 
 
-    // obatin this thread's id and increment counter
+    // obtain this thread's id and increment counter
     long threadId = pthread_self();
     counter++;
 
