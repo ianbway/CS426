@@ -11,76 +11,92 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include "buffer.h"
+
+#define BUFFER_SIZE 5
 
 /* the buffer */ 
+typedef int buffer_item;
+
 buffer_item buffer[BUFFER_SIZE];
 
-int buffSize = 0;
+int counter = 0;
+int in = 0;
+int out = 0;
 
 int insert_item(buffer_item);
 int remove_item(buffer_item *);
 void *producer_wrapper(void *);
 void *consumer_wrapper(void *);
 
+sem_t mutex;
+sem_t empty;
+sem_t full;
+
 int 
 insert_item(buffer_item item) 
 { 
 	/* insert item into buffer return 0 if successful, otherwise return -1 indicating an error condition */ 
 
-	int i;
-	for (i = 0; i < BUFFER_SIZE; i++)
-	{
-		if (buffer[i] == 0)
-		{
-			buffer[i] = item;
-			buffSize++;
-			return 0;
-		}
+	long threadId = pthread_self();
+	printf("Thread: %ld is Producing %d\n", threadId, item);
 
-		else
-		{
-			printf("Error. Could not add item to the back.\n");
-			return -1;
-		}
-	}
+	printf("Thread: %ld Before Wait.\n", threadId);
+	sem_wait(&empty);
+	sem_wait(&mutex);
+	printf("Thread: %ld After Wait.\n", threadId);
+ 	buffer[in] = item;
+ 	in = (in + 1) % BUFFER_SIZE;
+ 	counter++;
+ 	printf("Thread: %ld Before Signal.\n", threadId);
+ 	sem_post(&mutex);
+ 	int sig = sem_post(&full);
+
+ 	printf("Thread: %ld After Signal.\n", threadId);
+ 	printf("Thread: %ld Buffer Size: %d\n", threadId, counter);
+
+ 	if (sig)
+ 	{
+ 		return -1;
+ 	}
+
+ 	return 0;
 } 
 
 int 
 remove_item(buffer_item *item) 
 { 
 	/* remove an object from buffer placing it in item return 0 if successful, otherwise return -1 indicating an error condition */ 
-	if (buffer[0])
-	{
-		*item = buffer[0];
-		buffer[0] = 0;
-		buffSize--;
 
-		int i;
-		for (i = 0; i < BUFFER_SIZE; i++)
-		{
-			if ((buffer[i] == 0) && (buffer[i+1] != 0))
-			{
-				buffer[i] = buffer[i + 1];
-				buffer[i + 1] = 0;
-			}
-		}
+	long threadId = pthread_self();
+	printf("Thread: %ld is Consuming %d\n", threadId, *item);
 
-		return 0;
-	}
-	
-	else
+	printf("Thread: %ld Before Wait.\n", threadId);
+	sem_wait(&full);
+	sem_wait(&mutex);
+	printf("Thread: %ld After Wait.\n", threadId);
+ 	*item = buffer[out];
+ 	out = (out + 1) % BUFFER_SIZE;
+ 	counter--;
+ 	printf("Thread: %ld Before Signal.\n", threadId);
+ 	sem_post(&mutex);
+ 	int sig = sem_post(&empty);
+	/* consume the item in next consumed */
+
+
+ 	printf("Thread: %ld After Signal.\n", threadId);
+	printf("Thread: %ld Buffer Size: %d\n", threadId, counter);
+
+	if (sig)
 	{
-		printf("Error. Could not remove item from front.\n");
 		return -1;
 	}
+
+	return 0;
 } 
 
 void *
 producer_wrapper(void *param) 
 { 
-	long threadId = pthread_self();
-	printf("%ld is producing\n", threadId);
 
 	buffer_item item;
 	int retval;
@@ -91,45 +107,24 @@ producer_wrapper(void *param)
 		int randInt = rand() % 5;
 		sleep(randInt); 
 
-		pthread_mutex_t mutex;
-		/* create the mutex lock */
-		pthread_mutex_init(&mutex,NULL);
-
-		/* acquire the mutex lock */
-		pthread_mutex_lock(&mutex);
+		/* generate a random number */ 
+		int item = rand(); 
 
 		// call insert item
 		retval = insert_item(item);
-		printf("Buffer Size: %d Front: %d Back: %d \n", buffSize, buffer[0], buffer[buffSize]);
 
-		/* release the mutex lock */
-		pthread_mutex_unlock(&mutex);
-
-		/* generate a random number */ 
-		int item = rand(); 
 		if (retval) 
 		{
-			printf("report error condition\n"); 
-		}
-
-		else 
-		{
-			printf("producer produced %d\n", item);
+			printf("Error in producer_wrapper\n"); 
 		}
 	}
 
-	// formatting return val for pthread
-    int *ret = malloc(sizeof(int));
-    *ret = retval;
-    return ret;
+    pthread_exit(0);
 } 
 
 void *
 consumer_wrapper(void *param) 
 { 
-	long threadId = pthread_self();
-	printf("%ld is consuming\n", threadId);
-
 	buffer_item item;
 	int retval;
 
@@ -139,37 +134,16 @@ consumer_wrapper(void *param)
 		int randInt = rand() % 5;
 		sleep(randInt); 
 
-		pthread_mutex_t mutex;
-		/* create the mutex lock */
-		pthread_mutex_init(&mutex,NULL);
-
-		/* acquire the mutex lock */
-		pthread_mutex_lock(&mutex);
-
 		// call remove item
 		retval = remove_item(&item); 
-		printf("Buffer Size: %d Front: %d Back: %d \n", buffSize, buffer[0], buffer[buffSize]);
-
-		/* release the mutex lock */
-		pthread_mutex_unlock(&mutex);
 
 		if (retval)
 		{
-			printf("report error condition\n"); 
+			printf("Error in consumer_wrapper\n"); 
 		} 
-			
-		else 
-		{
-			printf("consumer consumed %d\n", item);
-		}
 	}
 
-
-
-	// formatting return val for pthread
-    int *ret = malloc(sizeof(int));
-    *ret = retval;
-    return ret;
+	pthread_exit(0);
 }
 
 int
@@ -185,9 +159,13 @@ main(int argc, char *argv[])
 
 	srand(time(NULL));   // should only be called once, this is to make randint
 
-	if (argc < 2)
+	sem_init(&mutex, 0, 1);
+	sem_init(&empty, 0, BUFFER_SIZE);
+	sem_init(&full, 0, 0);
+
+	if (argc != 4)
 	{
-		printf("Needs some arguments.\n");
+		printf("Invalid number of arguments.\n");
 		printf("First: sleep time in seconds.\n");
 		printf("Second: Number of producer threads.\n");
 		printf("Third: Number of consumer threads\n");
