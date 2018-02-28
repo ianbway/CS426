@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -15,8 +16,10 @@
 /* the buffer */ 
 buffer_item buffer[BUFFER_SIZE];
 
+int buffSize = 0;
+
 int insert_item(buffer_item);
-int remove_item(buffer_item);
+int remove_item(buffer_item *);
 void *producer_wrapper(void *);
 void *consumer_wrapper(void *);
 
@@ -24,21 +27,22 @@ int
 insert_item(buffer_item item) 
 { 
 	/* insert item into buffer return 0 if successful, otherwise return -1 indicating an error condition */ 
-	if (buffer[BUFFER_SIZE] == 0)
-	{
-		buffer[BUFFER_SIZE] = item;
-		return 0;
-	}
 
-	else if (buffer[BUFFER_SIZE] != 0)
+	int i;
+	for (i = 0; i < BUFFER_SIZE; i++)
 	{
+		if (buffer[i] == 0)
+		{
+			buffer[i] = item;
+			buffSize++;
+			return 0;
+		}
 
-	}
-
-	else
-	{
-		printf("Error. Could not add item to the back.\n"):
-		return -1;
+		else
+		{
+			printf("Error. Could not add item to the back.\n");
+			return -1;
+		}
 	}
 } 
 
@@ -48,13 +52,26 @@ remove_item(buffer_item *item)
 	/* remove an object from buffer placing it in item return 0 if successful, otherwise return -1 indicating an error condition */ 
 	if (buffer[0])
 	{
-		item = buffer[0];
+		*item = buffer[0];
+		buffer[0] = 0;
+		buffSize--;
+
+		int i;
+		for (i = 0; i < BUFFER_SIZE; i++)
+		{
+			if ((buffer[i] == 0) && (buffer[i+1] != 0))
+			{
+				buffer[i] = buffer[i + 1];
+				buffer[i + 1] = 0;
+			}
+		}
+
 		return 0;
 	}
 	
 	else
 	{
-		printf("Error. Could not remove item from front.\n"):
+		printf("Error. Could not remove item from front.\n");
 		return -1;
 	}
 } 
@@ -62,21 +79,37 @@ remove_item(buffer_item *item)
 void *
 producer_wrapper(void *param) 
 { 
+	long threadId = pthread_self();
+	printf("%ld is producing\n", threadId);
+
 	buffer_item item;
-	while (true) 
+	int retval;
+
+	while (1) 
 	{ 
 		/* sleep for a random period of time */ 
-		randInt = rand();
+		int randInt = rand() % 5;
 		sleep(randInt); 
 
+		pthread_mutex_t mutex;
+		/* create the mutex lock */
+		pthread_mutex_init(&mutex,NULL);
+
+		/* acquire the mutex lock */
+		pthread_mutex_lock(&mutex);
+
 		// call insert item
-		int retval = insert_item(item);
+		retval = insert_item(item);
+		printf("Buffer Size: %d Front: %d Back: %d \n", buffSize, buffer[0], buffer[buffSize]);
+
+		/* release the mutex lock */
+		pthread_mutex_unlock(&mutex);
 
 		/* generate a random number */ 
-		item = rand(); 
+		int item = rand(); 
 		if (retval) 
 		{
-			fprintf("report error condition"); 
+			printf("report error condition\n"); 
 		}
 
 		else 
@@ -94,19 +127,35 @@ producer_wrapper(void *param)
 void *
 consumer_wrapper(void *param) 
 { 
+	long threadId = pthread_self();
+	printf("%ld is consuming\n", threadId);
+
 	buffer_item item;
-	while (true) 
+	int retval;
+
+	while (1) 
 	{ 
 		/* sleep for a random period of time */ 
-		randInt = rand();
+		int randInt = rand() % 5;
 		sleep(randInt); 
 
+		pthread_mutex_t mutex;
+		/* create the mutex lock */
+		pthread_mutex_init(&mutex,NULL);
+
+		/* acquire the mutex lock */
+		pthread_mutex_lock(&mutex);
+
 		// call remove item
-		int retval = remove_item(&item); 
+		retval = remove_item(&item); 
+		printf("Buffer Size: %d Front: %d Back: %d \n", buffSize, buffer[0], buffer[buffSize]);
+
+		/* release the mutex lock */
+		pthread_mutex_unlock(&mutex);
 
 		if (retval)
 		{
-			fprintf("report error condition"); 
+			printf("report error condition\n"); 
 		} 
 			
 		else 
@@ -114,6 +163,8 @@ consumer_wrapper(void *param)
 			printf("consumer consumed %d\n", item);
 		}
 	}
+
+
 
 	// formatting return val for pthread
     int *ret = malloc(sizeof(int));
@@ -132,10 +183,21 @@ main(int argc, char *argv[])
 	/* 5. Sleep */ 
 	/* 6. Exit */
 
+	srand(time(NULL));   // should only be called once, this is to make randint
+
+	if (argc < 2)
+	{
+		printf("Needs some arguments.\n");
+		printf("First: sleep time in seconds.\n");
+		printf("Second: Number of producer threads.\n");
+		printf("Third: Number of consumer threads\n");
+		return 1;
+	}
+
 	// Step 1
-	int sleepTime = argv[1];
-	int prodThreads = argv[2];
-	int consThreads = argv[3];
+	int sleepTime = atoi(argv[1]);
+	int prodThreads = atoi(argv[2]);
+	int consThreads = atoi(argv[3]);
 
 	// Step 2
 	int i;
