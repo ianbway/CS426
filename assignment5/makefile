@@ -4,8 +4,8 @@
 
 all: fifo lru
 
-fifo: vmm.c
+fifo: vmmfifo.c
 	gcc -Wall -Wextra -std=c99 -g vmmfifo.c -o fifo
 
-lru: vmm.c
+lru: vmmlru.c
 	gcc -Wall -Wextra -std=c99 -g vmmlru.c -o lru
