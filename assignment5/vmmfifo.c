@@ -1,6 +1,6 @@
 // Ian Braudaway
 // CS426-001
-// Assignment 5 Virtual Memory Manager
+// Assignment 5 Virtual Memory Manager FIFO
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,30 +54,41 @@ int main(int argc, char *argv[])
 {
     // File variables.
     char* inputFile;
-    char* backingStoreFile = "./BACKING_STORE.bin";
+    char* backingStoreFile;
+    char* outputFile;
     char* backingStoreData;
     int backingStoreFD;
     char line[8];
     FILE* inputPointer;
+    FILE* outputPointer;
 
     initTLB();
     initPageTable();
 
     // Making sure command line arguments are in the correct form.
-    if (argc != 2) 
+    if (argc != 4) 
     {
-        printf("Enter address file as first argument. Nothing more or less.\n");
+        printf("Enter address file as first argument. Backing store as second. Output file is third. Nothing more or less.\n");
         exit(1);
     }
 
     else 
     {
         inputFile = argv[1];
+        backingStoreFile = argv[2];
+        outputFile = argv[3];
 
         // Does file exist?
         if ((inputPointer = fopen(inputFile, "r")) == NULL) 
         {
             printf("Input file could not be opened.\n");
+            exit(1);
+        }
+
+        // Does output file exist?
+        if ((outputPointer = fopen(outputFile, "a")) == NULL) 
+        {
+            printf("Output file could not be opened.\n");
             exit(1);
         }
 
@@ -155,9 +166,9 @@ int main(int argc, char *argv[])
             }
 
             // Print address information.
-            printf("Virtual address: %d ", virtual);
-            printf("Physical address: %d ", physical);
-            printf("Value: %d\n", value);
+            fprintf(outputPointer, "Virtual address: %d ", virtual);
+            fprintf(outputPointer, "Physical address: %d ", physical);
+            fprintf(outputPointer, "Value: %d\n", value);
         }
 
         // Statistics math.
@@ -165,14 +176,15 @@ int main(int argc, char *argv[])
         tlbRate = (float) tlbCounter / (float) addressCounter;
 
         // Print required statistics at end of file.
-        printf("Number of Translated Addresses = %d\n", addressCounter);
-        printf("Page Faults = %d\n", faultCounter);
-        printf("Page Fault Rate = %.3f\n", faultRate);
-        printf("TLB Hits = %d\n", tlbCounter);
-        printf("TLB Hit Rate = %.3f\n", tlbRate);
+        fprintf(outputPointer, "Number of Translated Addresses = %d\n", addressCounter);
+        fprintf(outputPointer, "Page Faults = %d\n", faultCounter);
+        fprintf(outputPointer, "Page Fault Rate = %.3f\n", faultRate);
+        fprintf(outputPointer, "TLB Hits = %d\n", tlbCounter);
+        fprintf(outputPointer, "TLB Hit Rate = %.3f\n", tlbRate);
 
         // Close files.
         fclose(inputPointer);
+        fclose(outputPointer);
         close(backingStoreFD);
     }
 
@@ -264,7 +276,7 @@ void updateTLB(int pageNumber, int frameNumber)
         tlb[backTLB][1] = frameNumber;
     }
     
-    // Other, LRU
+    
     else 
     {
         // Use circular array method to implement queue.
